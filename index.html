@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>機車保養紀錄</title>
+</head>
+<body>
+  <h1>我的機車保養紀錄</h1>
+
+  <p>
+    車輛：<select id="bike" onchange="show()"></select>
+    <button onclick="addBike()">新增車輛</button>
+  </p>
+
+  <p>日期：<input type="date" id="date"></p>
+  <p>里程：<input type="number" id="km"> 公里</p>
+  <p>項目：<input type="text" id="item" placeholder="例如：換機油"></p>
+  <p>金額：<input type="number" id="cost"> 元</p>
+  <button onclick="addRecord()">新增紀錄</button>
+
+  <h2>歷史紀錄（總花費 <span id="total">0</span> 元）</h2>
+  <ul id="list"></ul>
+  <button onclick="clearAll()">清除這台車的全部紀錄</button>
+
+  <script>
+    let records = JSON.parse(localStorage.getItem("records")) || [];
+    let bikes = JSON.parse(localStorage.getItem("bikes")) || ["我的車"];
+
+    // 舊的紀錄沒有「車輛」和「編號」，幫它們補上
+    records.forEach((r, i) => {
+      if (!r.bike) r.bike = bikes[0];
+      if (!r.id) r.id = Date.now() + i;
+    });
+    save();
+
+    // 目前選的是哪台車
+    function currentBike() {
+      return document.getElementById("bike").value;
+    }
+
+    // 把車子放進下拉選單
+    function showBikes() {
+      const select = document.getElementById("bike");
+      select.innerHTML = "";
+      bikes.forEach(b => {
+        select.innerHTML += `<option>${b}</option>`;
+      });
+    }
+
+    function addBike() {
+      const name = prompt("輸入車名，例如：勁戰六代");
+      if (!name) return;
+      if (bikes.includes(name)) {
+        alert("已經有這台車了");
+        return;
+      }
+      bikes.push(name);
+      save();
+      showBikes();
+      document.getElementById("bike").value = name;
+      show();
+    }
+
+    function addRecord() {
+      const date = document.getElementById("date").value;
+      const km = document.getElementById("km").value;
+      const item = document.getElementById("item").value;
+      const cost = document.getElementById("cost").value;
+
+      if (!date || !item) {
+        alert("日期和項目一定要填");
+        return;
+      }
+
+      records.push({ id: Date.now(), bike: currentBike(), date, km, item, cost: Number(cost) });
+      records.sort((a, b) => b.date.localeCompare(a.date));
+      save();
+      show();
+
+      document.getElementById("item").value = "";
+      document.getElementById("cost").value = "";
+    }
+
+    // 用編號刪除，不會刪錯
+    function deleteRecord(id) {
+      records = records.filter(r => r.id !== id);
+      save();
+      show();
+    }
+
+    function clearAll() {
+      if (!confirm(`確定要刪除「${currentBike()}」的全部紀錄嗎？`)) return;
+      records = records.filter(r => r.bike !== currentBike());
+      save();
+      show();
+    }
+
+    function save() {
+      localStorage.setItem("records", JSON.stringify(records));
+      localStorage.setItem("bikes", JSON.stringify(bikes));
+    }
+
+    // 只顯示目前這台車的紀錄
+    function show() {
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+      let total = 0;
+      records
+        .filter(r => r.bike === currentBike())
+        .forEach(r => {
+          list.innerHTML += `<li>${r.date}｜${r.km} 公里｜${r.item}｜${r.cost} 元
+            <button onclick="deleteRecord(${r.id})">刪除</button></li>`;
+          total += r.cost;
+        });
+      document.getElementById("total").textContent = total;
+    }
+
+    showBikes();
+    show();
+  </script>
+</body>
+</html>
